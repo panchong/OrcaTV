@@ -33,6 +33,8 @@ assets/prototypes/.*.drawio.bkp
 .playwright-mcp/
 .serena/
 .spec-workflow/
+# Local CodeGraph index (contains a large generated database).
+.codegraph/
 .vscode/
 camera_language_guide.md
 .superdesign
