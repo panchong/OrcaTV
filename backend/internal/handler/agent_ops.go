@@ -173,7 +173,7 @@ func resolveCaller(c *gin.Context, svc *app.Service, clients *agentops.ClientReg
 		}
 		return agentops.Caller{Kind: agentops.CallerExternal, ReadOnly: reg.Mode == agentops.ClientReadOnly}, reg.Label, nil
 	}
-	if agentops.OwnerTokenMatches(svc.DataDir(), strings.TrimSpace(c.GetHeader("X-Beeftv-Owner"))) {
+	if ownerCredentialTrusted(c, svc) {
 		return agentops.Caller{Kind: agentops.CallerManual}, "owner", nil
 	}
 	if trustedDesktopUI(c) {

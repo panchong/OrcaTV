@@ -28,6 +28,15 @@ func New(store Store, canvas CanvasFactory, jsonDir string) *Service {
 	return &Service{store: store, canvas: canvas, jsonDir: jsonDir, now: func() time.Time { return time.Now().UTC() }}
 }
 
+// DisableLegacyImport prevents a hosted identity surface from consulting the
+// pre-v10 shared JSON directory. OrcaTV has no legacy tenant data to migrate,
+// and disabling the shared path removes an unnecessary cross-user lookup.
+func (s *Service) DisableLegacyImport() {
+	if s != nil {
+		s.jsonDir = ""
+	}
+}
+
 // WithUndoMarkerHook injects a failure after canvas restore and before the
 // undone marker is written. Tests use it to prove the shared transaction
 // rolls the canvas write back.

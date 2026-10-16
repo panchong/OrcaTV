@@ -75,6 +75,97 @@ func installAgentSkill(t *testing.T, s *Service, files map[string]string) Pin {
 	return Pin{SkillID: installed.SkillID, VersionID: installed.VersionID, ContentHash: installed.ContentHash}
 }
 
+func TestPrivateSkillIDCannotBeUsedByAnotherUser(t *testing.T) {
+	s, _ := agentSkillFixture(t)
+	pin := installAgentSkill(t, s, map[string]string{
+		"SKILL.md":           "# 私有技能\n\n只允许作者读取。",
+		"references/note.md": "这个文件也不应跨用户泄露。",
+	})
+
+	list, err := s.Skills("foreign", SkillListRequest{Scope: "public", PageSize: 80})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range list.Skills {
+		if item.SkillID == pin.SkillID {
+			t.Fatal("private skill leaked into another user's list")
+		}
+	}
+
+	if _, err := s.SkillDetail("foreign", pin.SkillID); err == nil {
+		t.Fatal("private skill detail leaked")
+	}
+	if _, err := s.SkillPackageFiles("foreign", pin.SkillID); err == nil {
+		t.Fatal("private skill file list leaked")
+	}
+	if _, err := s.SkillPackageFile("foreign", pin.SkillID, "SKILL.md"); err == nil {
+		t.Fatal("private skill file content leaked")
+	}
+	if _, _, _, err := s.SkillPackageRawFile("foreign", pin.SkillID, "SKILL.md"); err == nil {
+		t.Fatal("private skill raw file leaked")
+	}
+	if _, err := s.SkillPackageBundle("foreign", pin.SkillID); err == nil {
+		t.Fatal("private skill bundle leaked")
+	}
+	if _, err := s.SearchSkillPackage("foreign", pin.SkillID, "私有"); err == nil {
+		t.Fatal("private skill search leaked")
+	}
+	if _, err := s.UpdateSkill("foreign", pin.SkillID, SkillMutationRequest{
+		SkillName: "改写", Description: "越权修改", Instruction: "# 改写",
+	}); err == nil {
+		t.Fatal("another user modified a private skill")
+	}
+	if err := s.DeleteSkill("foreign", pin.SkillID); err == nil {
+		t.Fatal("another user deleted a private skill")
+	}
+	if _, err := s.SetSkillAdded("foreign", pin.SkillID, true); err == nil {
+		t.Fatal("another user added a private skill")
+	}
+	if _, err := s.SetSkillLiked("foreign", pin.SkillID, true); err == nil {
+		t.Fatal("another user liked a private skill")
+	}
+	if _, err := s.SyncGitHubSkill("foreign", pin.SkillID); err == nil {
+		t.Fatal("another user synchronized a private skill")
+	}
+}
+
+func TestPublicSkillUserStateRemainsPerUser(t *testing.T) {
+	s, _ := agentSkillFixture(t)
+	pin := installAgentSkill(t, s, map[string]string{
+		"SKILL.md": "# 公开技能\n\n用户状态仍按用户隔离。",
+	})
+	skill, err := s.ownedSkill("owner", pin.SkillID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skill.IsPrivate = false
+	if err := s.repo.SaveSkill(skill); err != nil {
+		t.Fatal(err)
+	}
+
+	consumer, err := s.SetSkillAdded("consumer", pin.SkillID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !consumer.IsAdded || consumer.IsOwner {
+		t.Fatalf("consumer state = %+v", consumer)
+	}
+	consumer, err = s.SetSkillLiked("consumer", pin.SkillID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !consumer.IsLike {
+		t.Fatal("consumer like was not persisted")
+	}
+	owner, err := s.SkillDetail("owner", pin.SkillID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if owner.IsLike {
+		t.Fatal("consumer like leaked into owner state")
+	}
+}
+
 func TestInstalledUserSkillTasksUsePinnedBodyAndAuxiliaryFiles(t *testing.T) {
 	s, _ := agentSkillFixture(t)
 	cases := []struct {

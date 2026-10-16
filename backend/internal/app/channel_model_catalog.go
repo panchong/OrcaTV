@@ -34,6 +34,19 @@ func (s *Service) FetchChannelModelCatalog(ctx context.Context, actor *model.Use
 	if actor == nil || strings.TrimSpace(actor.ID) == "" {
 		return nil, Unauthorized("请先登录")
 	}
+	return s.fetchChannelModelCatalog(ctx, input)
+}
+
+// FetchPlatformChannelModelCatalog is the server-owned path used for
+// platform-level catalog refreshes. It deliberately has no user fallback; the
+// caller must already be an internal service boundary, while user-facing
+// routes continue to require an authenticated actor through
+// FetchChannelModelCatalog.
+func (s *Service) FetchPlatformChannelModelCatalog(ctx context.Context, input ChannelModelsRequest) ([]ChannelModelCatalogItem, error) {
+	return s.fetchChannelModelCatalog(ctx, input)
+}
+
+func (s *Service) fetchChannelModelCatalog(ctx context.Context, input ChannelModelsRequest) ([]ChannelModelCatalogItem, error) {
 	if err := s.resolveChannelModelsRequest(&input); err != nil {
 		return nil, err
 	}

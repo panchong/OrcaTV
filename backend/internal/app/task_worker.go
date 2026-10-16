@@ -64,6 +64,13 @@ func (w *taskWorkerCoordinator) executeClaimed(session taskruntime.Session) task
 	s := w.service
 	task := session.Task()
 	ctx := session.Context()
+	// OrcaTV 没有共享 owner workspace：每条任务都必须归属一个真实用户。缺失
+	// 或伪造 user_id 的任务（历史残留、外部写入）在此终态拒绝，绝不回退到统一
+	// owner 执行，否则产物与配额会落到错误的用户目录。任务行保留以便追溯。
+	if _, identityErr := taskUserIdentity(task); identityErr != nil {
+		refused := s.terminalCoordinator().refuse(task, "身份缺失", identityErr.Error())
+		return taskruntime.Outcome{Kind: taskruntime.KindRejected, Err: refused, Applied: refused == nil}
+	}
 	// 产品边界：旧内置 Agent 的 cloud_agent / cloud_agent_step 任务不再执行。历史遗留的
 	// 排队任务若被领走，会在这里以明确原因终止，而不是当成普通文本生成调用模型；
 	// 保留任务行本身（数据不删）以便追溯。
@@ -221,6 +228,20 @@ func (w *taskWorkerCoordinator) specialTaskOutcome(session taskruntime.Session, 
 		return taskruntime.Outcome{Kind: taskruntime.KindCancelled, Err: err}
 	}
 	return taskruntime.Outcome{Kind: taskruntime.KindFailed, Err: err}
+}
+
+// taskUserIdentity resolves the owning user for a claimed task. A task without
+// a usable user id cannot be executed safely: every business artefact, quota
+// and workspace path is derived from it, so there is no shared fallback.
+func taskUserIdentity(task *model.Task) (string, error) {
+	if task == nil {
+		return "", errors.New("任务缺少有效用户身份")
+	}
+	userID := strings.TrimSpace(task.UserID)
+	if userID == "" {
+		return "", errors.New("任务缺少有效用户身份")
+	}
+	return userID, nil
 }
 
 func leaseLostOutcome(session taskruntime.Session, providerAccepted bool) taskruntime.Outcome {

@@ -111,6 +111,16 @@ func Open(_ context.Context, raw Config) (result *Runtime, openErr error) {
 		_ = svc.Close()
 		cleanupDB()
 	}
+	identityOptions, identityEnabled, identityErr := orcaTVIdentity(cfg)
+	if identityErr != nil {
+		cleanupService()
+		return nil, identityErr
+	}
+	if identityEnabled {
+		// OrcaTV is a hosted identity surface. There is no shared legacy JSON
+		// workspace to import into per-user scopes.
+		svc.DisableLegacyAssistantTurnImport()
+	}
 	if err := initializeService(svc); err != nil {
 		cleanupService()
 		return nil, err
@@ -123,11 +133,7 @@ func Open(_ context.Context, raw Config) (result *Runtime, openErr error) {
 	beefAPIConnection, beefAPIErr := beefapi.New(beefapi.Options{
 		DataDir: cfg.DataDir, Provider: providerConfig, ClientVersion: buildinfo.Current().Version,
 		FetchCatalog: func(apiKey, baseURL string) ([]beefapi.CatalogModel, error) {
-			owner, ownerErr := svc.LocalWorkspaceOwner()
-			if ownerErr != nil {
-				return nil, ownerErr
-			}
-			items, catalogErr := svc.FetchChannelModelCatalog(context.Background(), owner, app.ChannelModelsRequest{
+			items, catalogErr := svc.FetchPlatformChannelModelCatalog(context.Background(), app.ChannelModelsRequest{
 				BaseURL: baseURL, APIKey: apiKey, APIFormat: "openai", ChannelID: beefapi.ChannelID, CredentialRef: beefapi.CredentialRef,
 			})
 			if catalogErr != nil {
@@ -166,13 +172,6 @@ func Open(_ context.Context, raw Config) (result *Runtime, openErr error) {
 		return nil, err
 	}
 
-	owner, ownerErr := svc.LocalWorkspaceOwner()
-	if ownerErr != nil {
-		cleanupService()
-		return nil, ownerErr
-	}
-	scope := workspace.Context{ID: owner.ID, DataDir: cfg.DataDir}
-
 	// 桌面启动令牌在构建路由前解析：它既是整个 API 的入口凭据，也是「本机受信任 UI」
 	// 的判据（内置助手签发 UI 会话时使用）。服务端形态没有它，DesktopTrust 为 nil。
 	launchToken := ""
@@ -204,13 +203,28 @@ func Open(_ context.Context, raw Config) (result *Runtime, openErr error) {
 	if cfg.Profile == ProfileDesktop {
 		router.Use(desktopCORSMiddleware())
 	}
-	router.Use(canvasHandler.WorkspaceMiddleware(scope))
+	// 桌面形态没有外部身份源，固定工作区作用域仍是唯一入口；OrcaTV 形态改由
+	// 身份中间件按登录用户动态注入工作区，因此这里根本不解析固定 owner：
+	// OrcaTV 下不存在任何共享工作区兜底。
+	if !identityEnabled {
+		owner, ownerErr := svc.LocalWorkspaceOwner()
+		if ownerErr != nil {
+			cleanupService()
+			return nil, ownerErr
+		}
+		router.Use(canvasHandler.WorkspaceMiddleware(workspace.Context{ID: owner.ID, DataDir: cfg.DataDir}))
+	}
 	// 本机可信凭据在组合根生成：owner 凭据与宿主凭据只在本机数据目录，0600。
 	agentops.EnsureAgentCredentials(svc.DataDir())
 	assistantHost := assistantruntime.New(assistantruntime.OptionsFromService(svc))
 	api := router.Group("/api")
 	status := newSystemStatus(db, svc, true)
 	registerSystemStatusRoutes(api, status)
+	if identityEnabled {
+		canvasHandler.RegisterOrcaTVHealthRoutes(router)
+		canvasHandler.RegisterOrcaTVIdentityRoutes(router, identityOptions)
+		api.Use(canvasHandler.OrcaTVIdentityMiddleware(identityOptions))
+	}
 	canvasHandler.RegisterDesktopCanvasAPIWithDependencies(api, svc, canvasHandler.RuntimeDependencies{
 		RequestCoordinator: localKernel,
 		ProviderConfig:     localRoot.ProviderConfig,
@@ -257,7 +271,9 @@ func Open(_ context.Context, raw Config) (result *Runtime, openErr error) {
 				router.ServeHTTP(w, canvasHandler.WithExternalBusinessPrincipal(r, reg.Mode == agentops.ClientReadOnly))
 				return
 			}
-			if r.Header.Get("X-Beeftv-Client") == "" && agentops.OwnerTokenMatches(svc.DataDir(), strings.TrimSpace(r.Header.Get("X-Beeftv-Owner"))) && canvasHandler.IsLocalBusinessRequest(r) {
+			// Owner 凭据是本机桌面壳的内部凭据。OrcaTV 服务端形态下它绝不能成为
+			// 普通成员请求绕过 OrcaDock 身份的旁路。
+			if cfg.Profile == ProfileDesktop && r.Header.Get("X-Beeftv-Client") == "" && agentops.OwnerTokenMatches(svc.DataDir(), strings.TrimSpace(r.Header.Get("X-Beeftv-Owner"))) && canvasHandler.IsLocalBusinessRequest(r) {
 				if launchToken != "" && r.Header.Get("X-Desktop-Token") != launchToken {
 					protected.ServeHTTP(w, r)
 					return

@@ -503,6 +503,40 @@ func TestLegacyJSONImportIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestDisableLegacyImportDoesNotReadSharedTurnDirectory(t *testing.T) {
+	fx := openTurnFixture(t)
+	turnID := "aabbccdd1122334a"
+	doc, err := json.Marshal(fx.readCanvas(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(map[string]any{
+		"turnId": turnID, "userId": fx.userID, "canvasId": fx.canvasID,
+		"revisionBefore": 0, "createdAt": "2026-01-02T03:04:05.000000000Z",
+		"state": "open", "referencedAssetIds": []string{"asset-1"}, "undone": false,
+		"document": json.RawMessage(doc),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := fx.writeLegacyBytes(t, turnID, raw)
+	fx.turns.DisableLegacyImport()
+
+	if _, ok, err := fx.turns.ScopeForHost(fx.userID, turnID); err != nil || ok {
+		t.Fatalf("disabled legacy import still resolved scope: ok=%v err=%v", ok, err)
+	}
+	if fx.rowCount(t, turnID) != 0 {
+		t.Fatal("disabled legacy import wrote a database record")
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatal("disabled legacy import removed the source file")
+	}
+
+	if _, ok, err := fx.turns.ScopeForHost(fx.userID, turnID); err != nil || ok {
+		t.Fatalf("second disabled lookup resolved scope: ok=%v err=%v", ok, err)
+	}
+}
+
 func TestCorruptLegacyFileIsObservable(t *testing.T) {
 	fx := openTurnFixture(t)
 	turnID := "aabbccdd1122334e"

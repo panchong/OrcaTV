@@ -44,6 +44,15 @@ func (s *Service) assistantTurnDir() string {
 	return filepath.Join(s.dataDir, "assistant-turns")
 }
 
+// DisableLegacyAssistantTurnImport is used by hosted identity modes that only
+// own new per-user data. Local/desktop runtimes keep legacy import support.
+func (s *Service) DisableLegacyAssistantTurnImport() {
+	if s == nil {
+		return
+	}
+	s.assistantTurnsOrInit().DisableLegacyImport()
+}
+
 func (s *Service) assistantTurnsOrInit() *assistantturns.Service {
 	if s == nil {
 		return nil

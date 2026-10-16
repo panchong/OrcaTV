@@ -105,7 +105,7 @@ func requireDesktopUITrust(c *gin.Context, svc *app.Service, desktopTrust func(*
 		fail(c, http.StatusForbidden, app.BadAuthRequest("只接受本机同源请求"))
 		return false
 	}
-	ownerOK := agentops.OwnerTokenMatches(svc.DataDir(), strings.TrimSpace(c.GetHeader("X-Beeftv-Owner")))
+	ownerOK := ownerCredentialTrusted(c, svc)
 	devBootstrap := strings.TrimSpace(os.Getenv("BEEFTV_UI_BOOTSTRAP")) == "1"
 	desktopShell := desktopTrust != nil && desktopTrust(c.Request)
 	if !ownerOK && !devBootstrap && !desktopShell {

@@ -59,6 +59,20 @@ func TestFetchChannelModelCatalogRejectsCredentialsWithoutNetwork(t *testing.T) 
 	}
 }
 
+func TestPlatformChannelModelCatalogDoesNotFallbackToWorkspaceOwner(t *testing.T) {
+	svc := &Service{}
+	_, err := svc.FetchPlatformChannelModelCatalog(context.Background(), ChannelModelsRequest{BaseURL: "https://example.com/v1"})
+	if err == nil {
+		t.Fatal("platform catalog accepted an empty credential")
+	}
+	if strings.Contains(err.Error(), "请先登录") {
+		t.Fatalf("platform catalog fell back to user authentication: %v", err)
+	}
+	if !strings.Contains(err.Error(), "API Key") {
+		t.Fatalf("platform catalog did not reach credential validation: %v", err)
+	}
+}
+
 func TestFetchChannelModelCatalogGeminiLoopbackDoesNotLeaveTheHost(t *testing.T) {
 	svc := &Service{}
 	_, err := svc.FetchChannelModelCatalog(context.Background(), &model.User{ID: "user-1"}, ChannelModelsRequest{

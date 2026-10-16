@@ -23,9 +23,9 @@ func RegisterWorkspaceRoutes(r *gin.RouterGroup, svc *app.Service) {
 			fail(c, http.StatusInternalServerError, err)
 			return
 		}
-		user, err := svc.WorkspaceOwner(scope.ID)
+		user, err := currentUser(c, svc)
 		if err != nil {
-			failService(c, err)
+			fail(c, http.StatusUnauthorized, err)
 			return
 		}
 		publicUser := app.AuthUser{User: *user}
@@ -49,8 +49,8 @@ func RegisterWorkspaceRoutes(r *gin.RouterGroup, svc *app.Service) {
 			"capabilities":    contract.Capabilities,
 			"workspace": gin.H{
 				"id":      scope.ID,
-				"name":    "本地工作区",
-				"owner":   "local",
+				"name":    user.DisplayName,
+				"owner":   user.Username,
 				"storage": "sqlite",
 			},
 			"user":          publicUser,
@@ -96,6 +96,13 @@ func RegisterWorkspaceRoutes(r *gin.RouterGroup, svc *app.Service) {
 			fail(c, http.StatusUnauthorized, err)
 			return
 		}
+		// Model channels are platform-level configuration. Only an authenticated
+		// admin may change them; members read a redacted projection elsewhere.
+		if _, err := CurrentPrincipal(c); err == nil {
+			if _, ok := RequireAdmin(c); !ok {
+				return
+			}
+		}
 		body, err := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, 2<<20))
 		if err != nil {
 			fail(c, http.StatusBadRequest, errors.New("本地模型配置读取失败"))
@@ -138,6 +145,11 @@ func RegisterWorkspaceRoutes(r *gin.RouterGroup, svc *app.Service) {
 
 func redactModelConfig(c *gin.Context, svc *app.Service, config map[string]any) map[string]any {
 	if _, external := externalBusiness(c); external {
+		config = redactExternalConfig(config)
+	}
+	// Non-admin members only ever see sanitized platform channels and model
+	// descriptions; provider credentials stay server-side.
+	if principal, err := CurrentPrincipal(c); err == nil && !principal.IsAdmin() {
 		config = redactExternalConfig(config)
 	}
 	managed := false
