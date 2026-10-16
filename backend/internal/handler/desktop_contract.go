@@ -23,3 +23,18 @@ func LocalDesktopContract() DesktopContract {
 		},
 	}
 }
+
+// HostedDesktopContract describes the OrcaTV surface. It keeps the same
+// capability shape as the local contract so existing clients can boot, but the
+// profile is explicit: platform model configuration is server-owned and
+// per-user business data is scoped by the identity middleware.
+func HostedDesktopContract() DesktopContract {
+	return DesktopContract{
+		Version: DesktopContractVersion,
+		Profile: "hosted",
+		Capabilities: DesktopCapabilities{
+			LocalAssets:   true,
+			ProviderCalls: true,
+		},
+	}
+}

@@ -105,16 +105,24 @@ func Open(_ context.Context, raw Config) (result *Runtime, openErr error) {
 		return nil, err
 	}
 
+	identityOptions, identityEnabled, identityErr := orcaTVIdentity(cfg)
+	if identityErr != nil {
+		cleanupDB()
+		return nil, identityErr
+	}
 	repo := repository.New(db)
-	svc := app.NewLocal(repo, cfg.DataDir)
+	var svc *app.Service
+	if identityEnabled {
+		// OrcaTV runs as a hosted, multi-user service. Local mode eagerly
+		// rejects system channels, which would make platform-configured models
+		// unusable for every member.
+		svc = app.New(repo, cfg.DataDir)
+	} else {
+		svc = app.NewLocal(repo, cfg.DataDir)
+	}
 	cleanupService := func() {
 		_ = svc.Close()
 		cleanupDB()
-	}
-	identityOptions, identityEnabled, identityErr := orcaTVIdentity(cfg)
-	if identityErr != nil {
-		cleanupService()
-		return nil, identityErr
 	}
 	if identityEnabled {
 		// OrcaTV is a hosted identity surface. There is no shared legacy JSON
@@ -129,6 +137,12 @@ func Open(_ context.Context, raw Config) (result *Runtime, openErr error) {
 	if configErr != nil {
 		cleanupService()
 		return nil, configErr
+	}
+	if identityEnabled {
+		if err := svc.SyncPlatformModelConfig(providerConfig); err != nil {
+			cleanupService()
+			return nil, err
+		}
 	}
 	beefAPIConnection, beefAPIErr := beefapi.New(beefapi.Options{
 		DataDir: cfg.DataDir, Provider: providerConfig, ClientVersion: buildinfo.Current().Version,

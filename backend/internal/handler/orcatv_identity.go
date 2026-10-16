@@ -16,6 +16,7 @@ import (
 )
 
 const principalContextKey = "orcatv.principal"
+const identityEnabledContextKey = "orcatv.identity.enabled"
 
 // loginURLHeader carries the OrcaDock entry point back to the OrcaTV frontend.
 // It is only ever set on responses produced by the OrcaTV identity layer, so the
@@ -127,6 +128,7 @@ func OrcaTVIdentityMiddleware(options OrcaTVIdentityOptions) gin.HandlerFunc {
 			return
 		}
 		c.Set(principalContextKey, principal)
+		c.Set(identityEnabledContextKey, true)
 		c.Set(workspaceContextKey, WorkspaceForPrincipal(options.DataDir, principal.UserID))
 		c.Next()
 	}
@@ -156,6 +158,15 @@ func CurrentPrincipal(c *gin.Context) (identity.Principal, error) {
 		return identity.Principal{}, err
 	}
 	return principal, nil
+}
+
+// IsOrcaTVIdentityEnabled reports whether the OrcaTV identity layer is mounted
+// for this runtime. Hosted contracts must not be inferred from the port or the
+// user record alone.
+func IsOrcaTVIdentityEnabled(c *gin.Context) bool {
+	value, exists := c.Get(identityEnabledContextKey)
+	enabled, ok := value.(bool)
+	return exists && ok && enabled
 }
 
 // RequireAdmin rejects non-admin callers. It is used by platform-level

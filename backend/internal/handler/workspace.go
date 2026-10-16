@@ -43,6 +43,11 @@ func RegisterWorkspaceRoutes(r *gin.RouterGroup, svc *app.Service) {
 			return
 		}
 		contract := LocalDesktopContract()
+		storageMode := "local"
+		if IsOrcaTVIdentityEnabled(c) {
+			contract = HostedDesktopContract()
+			storageMode = "remote"
+		}
 		ok(c, gin.H{
 			"contractVersion": contract.Version,
 			"profile":         contract.Profile,
@@ -54,7 +59,7 @@ func RegisterWorkspaceRoutes(r *gin.RouterGroup, svc *app.Service) {
 				"storage": "sqlite",
 			},
 			"user":          publicUser,
-			"storageMode":   "local",
+			"storageMode":   storageMode,
 			"logicalModels": logicalModels,
 			"runtimeLimits": limits,
 			"features":      features,
@@ -132,6 +137,12 @@ func RegisterWorkspaceRoutes(r *gin.RouterGroup, svc *app.Service) {
 				failService(c, err)
 				return
 			}
+			// Project the saved platform configuration into system channels so
+			// members immediately see and can generate with the updated catalog.
+			if err := syncPlatformModelConfig(c, svc); err != nil {
+				failService(c, err)
+				return
+			}
 			ok(c, gin.H{"saved": true, "revision": revision})
 			return
 		}
@@ -139,8 +150,23 @@ func RegisterWorkspaceRoutes(r *gin.RouterGroup, svc *app.Service) {
 			failService(c, err)
 			return
 		}
+		if err := syncPlatformModelConfig(c, svc); err != nil {
+			failService(c, err)
+			return
+		}
 		ok(c, gin.H{"saved": true})
 	})
+}
+
+func syncPlatformModelConfig(c *gin.Context, svc *app.Service) error {
+	if svc == nil || svc.IsLocalMode() {
+		return nil
+	}
+	providerConfig := requestProviderConfig(c, svc)
+	if store, ok := providerConfig.(app.PlatformModelConfigStore); ok {
+		return svc.SyncPlatformModelConfig(store)
+	}
+	return nil
 }
 
 func redactModelConfig(c *gin.Context, svc *app.Service, config map[string]any) map[string]any {
