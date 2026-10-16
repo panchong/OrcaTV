@@ -1,5 +1,6 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 
+import { handleOrcaTVUnauthorized } from "@/lib/orcatv-session";
 import { assertUserScope, isUserScopeAbandonedError, type CapturedUserScope } from "@/lib/user-scope-guard";
 
 export type ApiParams = Record<string, string | string[] | number | number[] | undefined>;
@@ -65,6 +66,9 @@ export async function request<T>(promise: Promise<{ data: BackendEnvelope<T>; st
     try {
         const response = await promise;
         if (response.data.code !== 0) {
+            if (response.status === 401 && handleOrcaTVUnauthorized(response.headers)) {
+                throw new DOMException("OrcaTV 会话已失效", "AbortError");
+            }
             throw new ApiError(response.data.msg || "请求失败", {
                 status: response.status,
                 code: response.data.code,
@@ -89,6 +93,9 @@ function unwrapTransportError(error: unknown): never {
     if (axios.isAxiosError<BackendEnvelope<unknown>>(error)) {
         const status = error.response?.status;
         const code = error.response?.data?.code;
+        if (status === 401 && handleOrcaTVUnauthorized(error.response?.headers)) {
+            throw new DOMException("OrcaTV 会话已失效", "AbortError");
+        }
         throw new ApiError(error.response?.data?.msg || transportFailureMessage(status, error.message), {
             status,
             code,
