@@ -54,8 +54,9 @@ func RegisterAgentProxyRoutes(r gin.IRouter, svc *app.Service, clients *agentops
 	registerAssistantRuntimeRoutes(r, svc)
 
 	guard := func(c *gin.Context, requireWrite bool) bool {
-		// 与 /agent-ops 完全相同的来源校验：Host/RemoteAddr/Origin 都必须是本机且同源。
-		if !isLoopbackRequest(c.Request) {
+		// 与 /ops 完全相同的来源校验：桌面形态要求本机同源，OrcaTV 形态要求
+		// OrcaDock 会话有效且同源。
+		if !trustedWorkspaceUI(c) {
 			c.JSON(http.StatusForbidden, gin.H{"code": http.StatusForbidden, "reason": "forbidden", "msg": "内置助手入口只接受本机同源请求"})
 			return false
 		}
@@ -139,8 +140,8 @@ func RegisterAgentProxyRoutes(r gin.IRouter, svc *app.Service, clients *agentops
 		ok(c, gin.H{"available": false, "reason": "host_unreachable", "model": modelInfo})
 	}
 	guardedStatus := func(c *gin.Context) {
-		// 状态查询不含任何凭据，只做本机同源校验：面板需要它在未签发会话时也能显示"未就绪"。
-		if !isLoopbackRequest(c.Request) {
+		// 状态查询不含任何凭据，只做同源校验：面板需要它在未签发会话时也能显示"未就绪"。
+		if !trustedWorkspaceUI(c) {
 			c.JSON(http.StatusForbidden, gin.H{"code": http.StatusForbidden, "reason": "forbidden"})
 			return
 		}

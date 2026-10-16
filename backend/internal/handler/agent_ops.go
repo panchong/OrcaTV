@@ -26,8 +26,8 @@ func RegisterAgentOpsRoutes(r gin.IRouter, svc *app.Service, store *agentops.Sto
 	agentops.RegisterDefaultOps(registry)
 
 	r.GET("/ops", func(c *gin.Context) {
-		if !isLoopbackRequest(c.Request) {
-			fail(c, http.StatusForbidden, app.BadAuthRequest("操作层只接受本机请求"))
+		if !trustedWorkspaceUI(c) {
+			fail(c, http.StatusForbidden, app.BadAuthRequest("操作层只接受受信任的同源界面"))
 			return
 		}
 		user, err := currentUser(c, svc)
@@ -93,9 +93,10 @@ func RegisterAgentOpsRoutes(r gin.IRouter, svc *app.Service, store *agentops.Sto
 	})
 
 	r.POST("/ops/:op", func(c *gin.Context) {
-		// 本机入口：只接受 loopback 来源，避免被浏览器跨站或外部主机调用。
-		if !isLoopbackRequest(c.Request) {
-			fail(c, http.StatusForbidden, app.BadAuthRequest("操作层只接受本机请求"))
+		// 界面入口：桌面形态要求 loopback 来源，OrcaTV 形态要求 OrcaDock
+		// 会话有效且同源，两条链都会拒绝跨站与外部主机调用。
+		if !trustedWorkspaceUI(c) {
+			fail(c, http.StatusForbidden, app.BadAuthRequest("操作层只接受受信任的同源界面"))
 			return
 		}
 		user, err := currentUser(c, svc)
@@ -178,6 +179,11 @@ func resolveCaller(c *gin.Context, svc *app.Service, clients *agentops.ClientReg
 	}
 	if trustedDesktopUI(c) {
 		return agentops.Caller{Kind: agentops.CallerManual}, "desktop-ui", nil
+	}
+	// OrcaTV 形态：已通过 OrcaDock 会话校验的同源界面就是手工调用者本人，
+	// 不需要（也拿不到）owner 凭据。
+	if hostedTrustedUIRequest(c) {
+		return agentops.Caller{Kind: agentops.CallerManual}, "orcatv-ui", nil
 	}
 	return agentops.Caller{}, "", errUnidentified
 }
@@ -273,6 +279,14 @@ func isLoopbackRequest(r *http.Request) bool {
 	if httptransport.DesktopAuthenticated(r) && (origin == "wails://wails" || origin == "http://wails.localhost" || origin == "https://wails.localhost") {
 		return true
 	}
+	return sameOriginRequest(r)
+}
+
+// sameOriginRequest 只判定 Origin 与 Host 是否同源（或命中显式白名单），
+// 不关心连接来自哪张网卡。桌面 loopback 链与 OrcaTV 托管界面链共用它做 CSRF 判定：
+// 浏览器对跨站请求一定会带上真实 Origin，而 loopback 与 OrcaTV 都是同源页面调用。
+func sameOriginRequest(r *http.Request) bool {
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
 	if origin == "" {
 		return true
 	}

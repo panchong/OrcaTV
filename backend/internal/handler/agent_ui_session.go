@@ -95,7 +95,8 @@ func RegisterAgentUISessionRoutes(r gin.IRouter, svc *app.Service, ui *uiSession
 			fail(c, http.StatusForbidden, app.BadAuthRequest("外部客户端不能签发界面会话"))
 			return
 		}
-		if !isLoopbackRequest(c.Request) {
+		hostedUI := hostedTrustedUIRequest(c)
+		if !isLoopbackRequest(c.Request) && !hostedUI {
 			fail(c, http.StatusForbidden, app.BadAuthRequest("只接受本机同源请求"))
 			return
 		}
@@ -108,7 +109,8 @@ func RegisterAgentUISessionRoutes(r gin.IRouter, svc *app.Service, ui *uiSession
 		devBootstrap := strings.TrimSpace(os.Getenv("BEEFTV_UI_BOOTSTRAP")) == "1"
 		// The UI bootstrap secret comes through the Wails binding, separately from entry credentials.
 		desktopShell := desktopTrust != nil && desktopTrust(c.Request)
-		if !ownerOK && !devBootstrap && !desktopShell {
+		// OrcaTV 形态没有桌面壳：OrcaDock 会话（hostedUI）就是签发界面会话的凭据。
+		if !ownerOK && !devBootstrap && !desktopShell && !hostedUI {
 			fail(c, http.StatusForbidden, app.BadAuthRequest("签发内置 UI 会话需要 owner 凭据或显式本地引导"))
 			return
 		}
@@ -118,6 +120,6 @@ func RegisterAgentUISessionRoutes(r gin.IRouter, svc *app.Service, ui *uiSession
 			return
 		}
 		ok(c, gin.H{"token": session.Token, "expiresAt": session.ExpiresAt, "scope": "workspace:read-write",
-			"bootstrap": map[string]any{"ownerToken": ownerOK, "devBootstrap": devBootstrap, "desktopShell": desktopShell}})
+			"bootstrap": map[string]any{"ownerToken": ownerOK, "devBootstrap": devBootstrap, "desktopShell": desktopShell, "hostedUI": hostedUI}})
 	})
 }
