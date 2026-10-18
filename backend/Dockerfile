@@ -1,8 +1,8 @@
-# syntax=docker/dockerfile:1.7
-
 FROM alpine:3.22 AS protocol-package-build
 
-RUN apk add --no-cache nodejs zip
+ARG APK_MIRROR
+RUN if [ -n "$APK_MIRROR" ]; then sed -i "s|dl-cdn.alpinelinux.org|$APK_MIRROR|g" /etc/apk/repositories; fi \
+    && apk add --no-cache nodejs zip
 
 WORKDIR /src
 COPY plugin-packages ./plugin-packages
@@ -14,9 +14,11 @@ ARG GOPROXY=https://proxy.golang.org,direct
 ARG BUILD_VERSION
 ARG BUILD_COMMIT=unknown
 ARG BUILD_TIME=unknown
+ARG APK_MIRROR
 ENV GOPROXY=$GOPROXY
 
-RUN apk add --no-cache build-base
+RUN if [ -n "$APK_MIRROR" ]; then sed -i "s|dl-cdn.alpinelinux.org|$APK_MIRROR|g" /etc/apk/repositories; fi \
+    && apk add --no-cache build-base
 
 WORKDIR /src/backend
 COPY VERSION /src/VERSION
@@ -30,7 +32,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build set -eu; \
 
 FROM alpine:3.22
 
-RUN apk add --no-cache ca-certificates tzdata wget \
+ARG APK_MIRROR
+RUN if [ -n "$APK_MIRROR" ]; then sed -i "s|dl-cdn.alpinelinux.org|$APK_MIRROR|g" /etc/apk/repositories; fi \
+    && apk add --no-cache ca-certificates tzdata wget \
     && addgroup -S app \
     && adduser -S app -G app
 

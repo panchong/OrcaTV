@@ -1,11 +1,14 @@
-# syntax=docker/dockerfile:1.7
-
 # 构建 Vite 前端产物。
 FROM oven/bun:1.3.13 AS web-build
 
 WORKDIR /app/web
 ARG BUILD_VERSION
 ENV CANVAS_BUILD_VERSION=${BUILD_VERSION}
+# The production image is the hosted OrcaTV surface, never the Wails desktop
+# build. Without this explicit value Vite treats the build as local-first and
+# bypasses the hosted workspace/model paths.
+ARG VITE_CANVAS_LOCAL_MODE=false
+ENV VITE_CANVAS_LOCAL_MODE=${VITE_CANVAS_LOCAL_MODE}
 COPY web/package.json web/bun.lock ./
 # bun.lock 里声明了 patchedDependencies，缺失 patches/ 会让 bun install 直接失败。
 COPY web/patches ./patches
