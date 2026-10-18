@@ -177,6 +177,7 @@ func redactModelConfig(c *gin.Context, svc *app.Service, config map[string]any) 
 	// descriptions; provider credentials stay server-side.
 	if principal, err := CurrentPrincipal(c); err == nil && !principal.IsAdmin() {
 		config = redactExternalConfig(config)
+		config = projectPublicSystemChannels(svc, config)
 	}
 	managed := false
 	if connection, err := requestBeefAPI(c, svc); err == nil && connection != nil {
@@ -184,6 +185,35 @@ func redactModelConfig(c *gin.Context, svc *app.Service, config map[string]any) 
 		return connection.RedactConfig(config)
 	}
 	return beefapi.RedactConfig(config, managed)
+}
+
+// projectPublicSystemChannels replaces the on-disk platform snapshot with the
+// system-scope read model for non-admin members. Members must receive
+// scope="system" plus a stable channel id so generation requests carry the
+// channel selector the admission layer requires; upstream base URLs and
+// credentials are never part of this projection.
+func projectPublicSystemChannels(svc *app.Service, config map[string]any) map[string]any {
+	if svc == nil || config == nil {
+		return config
+	}
+	channels, err := svc.PublicSystemChannels()
+	if err != nil || len(channels) == 0 {
+		return config
+	}
+	encoded, err := json.Marshal(channels)
+	if err != nil {
+		return config
+	}
+	var publicChannels []any
+	if err := json.Unmarshal(encoded, &publicChannels); err != nil {
+		return config
+	}
+	projected := make(map[string]any, len(config))
+	for key, value := range config {
+		projected[key] = value
+	}
+	projected["channels"] = publicChannels
+	return projected
 }
 
 func preserveManagedModelConfig(c *gin.Context, svc *app.Service, raw json.RawMessage) json.RawMessage {

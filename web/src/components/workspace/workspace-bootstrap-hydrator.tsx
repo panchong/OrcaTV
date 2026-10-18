@@ -104,7 +104,10 @@ export function shouldSaveLocalModelConfig({ subscriptionReady, modelConfigReady
 
 async function hydrateLocalModelConfig() {
     const result = await hydrateModelConfig();
-    const normalizedConfig = localWorkspaceConfig(normalizeConfigSnapshot({ config: result.config }).config);
+    // The provider snapshot is authoritative: hosted OrcaTV returns redacted
+    // system channels that must survive hydration, while local installs simply
+    // have none to keep.
+    const normalizedConfig = localWorkspaceConfig(normalizeConfigSnapshot({ config: result.config }).config, { keepSystemChannels: true });
     useConfigStore.getState().replaceConfig(normalizedConfig);
     if (shouldPersistHydratedModelConfig(result.health)) await commitModelConfig(normalizedConfig);
 }

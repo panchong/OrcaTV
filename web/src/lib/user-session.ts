@@ -83,12 +83,21 @@ async function hydrateLocalWorkspace(payload: WorkspaceBootstrapPayload) {
     }
 }
 
-/** Strip legacy hosted channel snapshots before local provider config is used. */
-export function localWorkspaceConfig(config: AiConfig): AiConfig {
+/**
+ * Normalize persisted provider config. Local desktop installs strip hosted
+ * channel snapshots, while the hosted OrcaTV runtime keeps the backend-owned
+ * system channels so members can still select and request them.
+ */
+export function localWorkspaceConfig(config: AiConfig, options: { keepSystemChannels?: boolean } = {}): AiConfig {
+    const keepSystemChannels = options.keepSystemChannels === true;
     return normalizeConfigSnapshot({
         config: {
             ...config,
-            channels: config.channels.filter((channel) => channel.scope !== "system" && !isSystemProxyBaseUrl(channel.baseUrl)),
+            channels: config.channels.filter((channel) =>
+                keepSystemChannels
+                    ? channel.scope === "system" || !isSystemProxyBaseUrl(channel.baseUrl)
+                    : channel.scope !== "system" && !isSystemProxyBaseUrl(channel.baseUrl),
+            ),
             runningHub: { ...defaultConfig.runningHub },
         },
     }).config;

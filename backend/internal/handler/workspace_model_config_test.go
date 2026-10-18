@@ -8,9 +8,14 @@ import (
 	"testing"
 
 	"infinite-canvas/backend/internal/app"
+	"infinite-canvas/backend/internal/identity"
+	"infinite-canvas/backend/internal/model"
+	"infinite-canvas/backend/internal/repository"
 	"infinite-canvas/backend/internal/workspace"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func TestWorkspaceModelConfigReturnsBuiltinBeefAPIAndPersistenceMetadata(t *testing.T) {
@@ -70,6 +75,84 @@ func TestWorkspaceModelConfigRejectsStaleRevisionWithoutLeakingSecrets(t *testin
 	}
 	if bytes.Contains(stale.Body.Bytes(), []byte("must-not-leak")) || bytes.Contains(stale.Body.Bytes(), []byte("first-secret")) {
 		t.Fatalf("error response leaked a secret: %s", stale.Body.String())
+	}
+}
+
+func TestWorkspaceModelConfigProjectsSystemChannelsForMembers(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	dir := t.TempDir()
+	store, err := workspace.NewProviderConfig(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveLocalModelConfig([]byte(`{"channels":[{"id":"disk-user","scope":"user","baseUrl":"https://user.invalid/v1","apiKey":"disk-user-secret","enabled":true}]}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := gorm.Open(sqlite.Open("file:member-model-config?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&model.ModelChannel{}, &model.ChannelModel{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&model.ModelChannel{
+		ID: "platform-channel", Name: "内部平台渠道", PublicAlias: "创作精选", Scope: model.ChannelScopeSystem,
+		Enabled: true, BaseURL: "https://platform.invalid/v1", APIKey: "platform-secret", APIFormat: "openai",
+		HeadersJSON: `[{"name":"Authorization","value":"Bearer platform-header-secret"}]`,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&model.ChannelModel{
+		ID: "platform-model", ChannelID: "platform-channel", ModelKey: "platform-text", DisplayName: "平台文本",
+		Capability: "text", Protocol: model.ChannelInterfaceChatCompletion, Enabled: true,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	service := app.New(repository.New(db), dir)
+	router := gin.New()
+	router.Use(WorkspaceMiddleware(workspace.Context{ID: "u_member", DataDir: dir}))
+	router.Use(RuntimeDependenciesMiddleware(RuntimeDependencies{ProviderConfig: store}))
+	router.Use(func(c *gin.Context) {
+		c.Set(principalContextKey, identity.Principal{UserID: "u_member", Role: identity.RoleUser, DisplayName: "Member", SID: "sid-member"})
+		c.Set(identityEnabledContextKey, true)
+		c.Next()
+	})
+	RegisterWorkspaceRoutes(router.Group("/api"), service)
+
+	get := httptest.NewRecorder()
+	router.ServeHTTP(get, httptest.NewRequest(http.MethodGet, "/api/workspace/model-config", nil))
+	if get.Code != http.StatusOK {
+		t.Fatalf("get status = %d body=%s", get.Code, get.Body.String())
+	}
+	config, _ := modelConfigResponseData(t, get)["config"].(map[string]any)
+	channels, _ := config["channels"].([]any)
+	if len(channels) != 1 {
+		t.Fatalf("member channels = %#v", channels)
+	}
+	channel, _ := channels[0].(map[string]any)
+	if channel["id"] != "platform-channel" || channel["scope"] != "system" {
+		t.Fatalf("member system channel projection = %#v", channel)
+	}
+	if channel["apiKey"] != "system" || channel["baseUrl"] != "/api/ai/system/platform-channel" {
+		t.Fatalf("member channel credentials were not projected safely: %#v", channel)
+	}
+	if _, exists := channel["headers"]; exists {
+		t.Fatalf("member channel exposed outbound headers: %#v", channel)
+	}
+	for _, secret := range []string{"disk-user-secret", "platform-secret", "platform-header-secret", "https://platform.invalid/v1"} {
+		if bytes.Contains(get.Body.Bytes(), []byte(secret)) {
+			t.Fatalf("member response leaked %q: %s", secret, get.Body.String())
+		}
+	}
+
+	put := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPut, "/api/workspace/model-config", bytes.NewReader([]byte(`{"config":{"channels":[]},"expectedRevision":0}`)))
+	request.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(put, request)
+	if put.Code != http.StatusForbidden {
+		t.Fatalf("member put status = %d body=%s", put.Code, put.Body.String())
 	}
 }
 

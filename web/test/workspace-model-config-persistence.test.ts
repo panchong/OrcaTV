@@ -116,6 +116,19 @@ test("local config strips hosted system channels but keeps direct user channels"
     expect(config.channels[0]?.apiKey).toBe("local-key");
 });
 
+test("hosted hydration keeps the backend system channel projection", () => {
+    const config = localWorkspaceConfig({
+        ...defaultConfig,
+        channels: [
+            createModelChannel({ id: "system", scope: "system", baseUrl: "/api/ai/system/platform", apiKey: "system", models: ["managed"] }),
+            createModelChannel({ id: "direct", scope: "user", baseUrl: "https://example.test/v1", apiKey: "local-key", models: ["local-model"] }),
+        ],
+        model: "system::managed",
+    }, { keepSystemChannels: true });
+    expect(config.channels.map((channel) => channel.id)).toEqual(["system", "direct"]);
+    expect(config.channels[0]?.scope).toBe("system");
+});
+
 test("local config disables legacy RunningHub settings and system catalog refresh", async () => {
     const config = localWorkspaceConfig({
         ...defaultConfig,
