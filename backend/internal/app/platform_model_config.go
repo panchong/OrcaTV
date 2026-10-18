@@ -127,13 +127,27 @@ func projectPlatformChannelModels(channelID string, rawProfiles any) ([]model.Ch
 		if value, ok := profile["enabled"].(bool); ok {
 			enabled = value
 		}
-		capabilityJSON := "{}"
+		capabilityJSON := ""
 		if value, ok := profile["capabilityConfig"]; ok && value != nil {
 			encoded, err := json.Marshal(value)
 			if err != nil {
 				return nil, fmt.Errorf("平台渠道 %s 的模型 %s 能力配置无效: %w", channelID, modelKey, err)
 			}
 			capabilityJSON = string(encoded)
+		}
+		// 平台渠道配置里的文本模型通常不写能力配置；与本地快照一致，这里回退到
+		// 协议默认能力，否则渠道模型会以空配置落库并被 admission 拒绝。
+		if isEmptyCapabilityJSON(capabilityJSON) {
+			if defaults := modelcatalog.DefaultModelCapabilityConfigForModel(protocol, providerModelKey); defaults != nil {
+				encoded, err := json.Marshal(defaults)
+				if err != nil {
+					return nil, fmt.Errorf("平台渠道 %s 的模型 %s 默认能力配置无效: %w", channelID, modelKey, err)
+				}
+				capabilityJSON = string(encoded)
+			}
+		}
+		if capabilityJSON == "" {
+			capabilityJSON = "{}"
 		}
 		result = append(result, model.ChannelModel{
 			ChannelID:            channelID,
@@ -148,6 +162,16 @@ func projectPlatformChannelModels(channelID string, rawProfiles any) ([]model.Ch
 		})
 	}
 	return result, nil
+}
+
+// isEmptyCapabilityJSON 判断平台配置中的能力配置是否等同于“未配置”。
+func isEmptyCapabilityJSON(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "", "{}", "null":
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Service) replaceSystemPlatformChannels(desired []projectedModelConfig) error {
