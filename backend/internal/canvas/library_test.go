@@ -255,6 +255,28 @@ func TestCanvasDeleteRetainsDrawingTombstoneAcrossRecreate(t *testing.T) {
 	}
 }
 
+func TestDeleteUserCanvasProjectRejectsForeignOwner(t *testing.T) {
+	svc := newCanvasHistoryTestService(t)
+	if _, err := svc.UpsertUserCanvasProject("owner", json.RawMessage(`{"id":"canvas-owned","revision":0,"title":"owner","nodes":[]}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	err := svc.DeleteUserCanvasProject("intruder", "canvas-owned")
+	var appError *kernel.AppError
+	if !errors.As(err, &appError) || appError.Status != http.StatusNotFound {
+		t.Fatalf("foreign delete error = %v, want 404", err)
+	}
+	if _, err := svc.UserCanvasProject("owner", "canvas-owned"); err != nil {
+		t.Fatalf("foreign delete removed owner canvas: %v", err)
+	}
+	if err := svc.DeleteUserCanvasProject("owner", "canvas-owned"); err != nil {
+		t.Fatalf("owner delete error = %v", err)
+	}
+	if err := svc.DeleteUserCanvasProject("owner", "canvas-owned"); !errors.As(err, &appError) || appError.Status != http.StatusNotFound {
+		t.Fatalf("repeat delete error = %v, want 404", err)
+	}
+}
+
 func TestCanvasDrawingPreviewBlocksResourceCleanup(t *testing.T) {
 	svc := newCanvasHistoryTestService(t)
 	migrateUploadSettlementTables(t, svc.repo.DB())
