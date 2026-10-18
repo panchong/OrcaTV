@@ -129,7 +129,7 @@ func (s *Service) Reset(actor *model.User) (*AdminSetting, error) {
 			return err
 		}
 		after := DefaultSetting()
-		if err := s.appendAudit(actor, "appearance.reset", "system_setting", SettingKey, "恢复 BeefTV 默认品牌标识", map[string]any{"before": before, "after": after}); err != nil {
+		if err := s.appendAudit(actor, "appearance.reset", "system_setting", SettingKey, "恢复 OrcaTV 默认品牌标识", map[string]any{"before": before, "after": after}); err != nil {
 			return err
 		}
 		result, err := s.Admin(actor)

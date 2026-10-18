@@ -4,7 +4,7 @@ import { getDesktopAppBinding, type ReferenceStorageConfig } from "@/services/de
 
 const fields = [
     ["endpoint", "S3 端点", "https://…"],
-    ["bucket", "存储桶名称", "例如 beeftv-media"],
+    ["bucket", "存储桶名称", "例如 orcatv-media"],
     ["region", "区域", "R2 使用 auto；S3 使用存储桶所在区域"],
     ["accessKeyId", "Access Key ID", ""],
     ["publicBaseURL", "存储桶公网地址", "https://media.example.com"],

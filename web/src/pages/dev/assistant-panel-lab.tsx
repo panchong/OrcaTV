@@ -112,7 +112,7 @@ export default function AssistantPanelLab() {
               ? { available: false, reason: "host_starting" }
               : state === "no-model"
                 ? { available: false, reason: "model_not_configured" }
-                : { available: true, model: { id: "deepseek-v3", channelId: "beefapi", channelName: "BeefAPI" } };
+                : { available: true, model: { id: "deepseek-v3", channelId: "beefapi", channelName: "OrcaTV" } };
 
     const assistant = stubController(open, setOpen, width, setWidth, status);
     if (state === "interrupted") {

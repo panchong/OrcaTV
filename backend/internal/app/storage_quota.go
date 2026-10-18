@@ -126,7 +126,7 @@ func taskStorageError(cause error) error {
 	if mapped := localtask.AdmissionValidationError(cause); mapped != nil {
 		return mapped
 	}
-	return &AppError{Status: 500, Code: 500, Reason: "local_storage_failed", Message: "本地任务保存失败，尚未提交生成。请重启 BeefTV 后重试；若仍失败，请更新应用并联系支持", Cause: cause}
+	return &AppError{Status: 500, Code: 500, Reason: "local_storage_failed", Message: "本地任务保存失败，尚未提交生成。请重启 OrcaTV 后重试；若仍失败，请更新应用并联系支持", Cause: cause}
 }
 
 // 任务完成会同时扩张任务历史和画布操作数据，必须在同一临界区核算并原子写入。

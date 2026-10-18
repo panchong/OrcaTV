@@ -169,8 +169,8 @@ func TestStartReportsConnectionFailureInsteadOfStorageFailure(t *testing.T) {
 		err    error
 		want   string
 	}{
-		{"network", 0, errors.New("synthetic secret-bearing transport failure"), "无法连接 BeefTV 服务，请检查网络后重试"},
-		{"service", 503, nil, "BeefTV 连接服务暂时不可用，请稍后重试"},
+		{"network", 0, errors.New("synthetic secret-bearing transport failure"), "无法连接 OrcaTV 服务，请检查网络后重试"},
+		{"service", 503, nil, "OrcaTV 连接服务暂时不可用，请稍后重试"},
 		{"rate limit", 429, nil, "连接尝试过于频繁，请稍后重试"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

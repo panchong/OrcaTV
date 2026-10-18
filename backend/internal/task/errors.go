@@ -13,7 +13,7 @@ const (
 	RetiredAgentBoundaryMessage                        = "Agent 能力已下线，请在画布中手动创建节点并生成"
 	RetiredCloudAgentPrefix                            = "cloud_agent"
 	RetiredMemoryCompactOp                             = "agent_memory_compact"
-	LocalStorageFailedMessage                          = "本地任务保存失败，尚未提交生成。请重启 BeefTV 后重试；若仍失败，请更新应用并联系支持"
+	LocalStorageFailedMessage                          = "本地任务保存失败，尚未提交生成。请重启 OrcaTV 后重试；若仍失败，请更新应用并联系支持"
 	DrainCreateMessage                                 = "服务正在维护，暂不接受新的生成任务"
 	DrainRetryMessage                                  = "服务正在维护，暂不接受任务重试"
 	ClientOperationConflictMessage                     = "同一生成确认已用于不同内容，没有新建任务"

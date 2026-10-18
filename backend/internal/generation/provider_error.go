@@ -1310,7 +1310,7 @@ func outboundPolicyCopy(message string) (categoryCopy, bool) {
 	case "外部服务域名解析失败":
 		return categoryCopy{
 			Reason: "模型服务域名解析失败",
-			Action: "请检查渠道服务地址中的域名是否正确，并确认运行 BeefTV 的设备能够正常联网和解析该域名",
+			Action: "请检查渠道服务地址中的域名是否正确，并确认运行 OrcaTV 的设备能够正常联网和解析该域名",
 		}, true
 	}
 	return categoryCopy{}, false

@@ -8,6 +8,6 @@ export const beefTVCapabilityItems = [
     // local canvas and let the canvas insert the correctly configured node.
     { id: "audio", label: "音频生成", detail: "配音与声音素材", to: "/canvas?mode=new&add=audio", icon: AudioLines, disabled: false },
     { id: "director", label: "3D 导演台", detail: "新建画布并打开 3D 导演台", to: "/canvas?mode=new&start=director", icon: Box, disabled: false },
-    { id: "agent", label: "Beef Agent", detail: "新建画布并打开 Beef Agent", to: "/canvas?mode=new&start=agent", icon: Bot, disabled: false },
+    { id: "agent", label: "OrcaTV Agent", detail: "新建画布并打开 OrcaTV Agent", to: "/canvas?mode=new&start=agent", icon: Bot, disabled: false },
     { id: "projects", label: "项目库", detail: "查看已有项目，继续创作", to: "/project", icon: Clapperboard, disabled: false },
 ] as const;

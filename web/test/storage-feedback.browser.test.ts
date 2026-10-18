@@ -53,7 +53,7 @@ test("migration restart advice stays visible while technical details are collaps
         await page.goto(server.url + "?migration-error");
         await page.getByRole("button", { name: "选择文件夹", exact: true }).click();
         await page.getByRole("button", { name: "迁移旧数据并使用新目录" }).click();
-        await page.getByText("迁移未完成，原数据已保留，但工作区未能重新打开。请重启 BeefTV", { exact: true }).waitFor();
+        await page.getByText("迁移未完成，原数据已保留，但工作区未能重新打开。请重启 OrcaTV", { exact: true }).waitFor();
         expect(await page.getByText(/fixture failure/).isVisible()).toBe(false);
         await page.getByText("错误详情", { exact: true }).click();
         expect(await page.getByText(/fixture failure/).isVisible()).toBe(true);
@@ -70,7 +70,7 @@ test("failed cleanup closes stale confirmation and retains honest retry state", 
         await page.getByRole("button", { name: "清理原目录，释放磁盘空间" }).click();
         await page.getByRole("button", { name: "确认并清理", exact: true }).click();
         await page.getByRole("dialog").waitFor({ state: "detached" });
-        await page.getByText("临时文件仍在使用中，请重启 BeefTV 后再次清理。当前存储目录不受影响", { exact: true }).waitFor();
+        await page.getByText("临时文件仍在使用中，请重启 OrcaTV 后再次清理。当前存储目录不受影响", { exact: true }).waitFor();
         expect(await page.getByText(/原数据仍保留在/).count()).toBe(0);
         await page.getByText(/请保留当前存储目录/).waitFor();
         await page.screenshot({ path: import.meta.dir + "/../../output/storage-cleanup-interrupted.png" });

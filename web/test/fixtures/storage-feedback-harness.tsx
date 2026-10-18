@@ -20,7 +20,7 @@ window.go = {
             StorageSettings: async () => usage,
             ChooseStorageDirectory: async () => "D:\\BeefTV",
             MigrateStorage: async (path) => {
-                if (params.has("migration-error")) throw new Error("迁移未完成，原数据已保留，但工作区未能重新打开。请重启 BeefTV\n\nopen C:\\private\\data: fixture failure");
+                if (params.has("migration-error")) throw new Error("迁移未完成，原数据已保留，但工作区未能重新打开。请重启 OrcaTV\n\nopen C:\\private\\data: fixture failure");
                 usage = { ...usage, dataDir: path, previousDir: initial.dataDir, previousBytes: initial.usedBytes };
                 localStorage.setItem("fixture-usage", JSON.stringify(usage));
                 return usage;
@@ -28,7 +28,7 @@ window.go = {
             CleanupPreviousStorage: async () => {
                 if (params.has("cleanup-error")) {
                     usage = { ...usage, previousBytes: 2048 };
-                    throw new Error("临时文件仍在使用中，请重启 BeefTV 后再次清理。当前存储目录不受影响\n\nfixture sharing violation");
+                    throw new Error("临时文件仍在使用中，请重启 OrcaTV 后再次清理。当前存储目录不受影响\n\nfixture sharing violation");
                 }
                 usage = { ...usage, previousDir: undefined };
                 localStorage.setItem("fixture-usage", JSON.stringify(usage));

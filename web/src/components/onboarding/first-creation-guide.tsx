@@ -170,7 +170,7 @@ export function FirstCreationGuide() {
         bottom: Math.min(window.innerHeight, highlightRect.bottom + 8),
     };
     return <>
-        <AppModal open={finished} transitionName="" maskTransitionName="" title="引导已结束" onCancel={() => setFinished(false)} footer={<Button type="primary" onClick={() => setFinished(false)}>继续使用 BeefTV</Button>} width={420}>
+        <AppModal open={finished} transitionName="" maskTransitionName="" title="引导已结束" onCancel={() => setFinished(false)} footer={<Button type="primary" onClick={() => setFinished(false)}>继续使用 OrcaTV</Button>} width={420}>
             <p className="first-creation-intro">随时从侧栏重新打开引导。</p>
         </AppModal>
         <AppModal open={welcome} transitionName="" maskTransitionName="" title="完成第一次创作" onCancel={dismiss} footer={null} width={420} destroyOnHidden>

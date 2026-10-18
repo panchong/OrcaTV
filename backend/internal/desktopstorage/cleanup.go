@@ -134,7 +134,7 @@ func CleanupPrevious(root, current string, acquireLock func(string) (*os.File, e
 	// retain the receipt so cleanup can be retried after those handles close.
 	if err = os.RemoveAll(filepath.Join(location.PreviousDir, "cache", "tmp")); err != nil {
 		if fileInUse(err) {
-			return fmt.Errorf("临时文件仍在使用中，请重启 BeefTV 后再次清理。当前存储目录不受影响\n\n%w", err)
+			return fmt.Errorf("临时文件仍在使用中，请重启 OrcaTV 后再次清理。当前存储目录不受影响\n\n%w", err)
 		}
 		return fmt.Errorf("临时文件未能清理，当前存储目录不受影响。请检查原目录的访问权限和磁盘状态\n\n%w", err)
 	}

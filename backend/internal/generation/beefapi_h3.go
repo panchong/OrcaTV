@@ -254,7 +254,7 @@ func h3Controls(body, metadata map[string]interface{}, base bool, style string, 
 			}
 			body[k] = s
 		case "enable_safety_checker", "sync_mode":
-			// These settings are fixed for BeefTV's task-based video pipeline.
+			// These settings are fixed for OrcaTV's task-based video pipeline.
 			// Ignore values persisted by older clients instead of re-enabling them.
 			continue
 		case "damage_level":

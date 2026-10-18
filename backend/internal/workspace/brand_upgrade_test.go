@@ -11,7 +11,7 @@ func TestBrandPresetPreservesLegacyOriginAndReferences(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if channel["baseUrl"] != origin || channel["name"] != "BeefTV" || channel["id"] != "beefapi" || channel["apiKey"] != "stored" {
+		if channel["baseUrl"] != origin || channel["name"] != "OrcaTV" || channel["id"] != "beefapi" || channel["apiKey"] != "stored" {
 			t.Fatalf("migration changed channel: %#v", channel)
 		}
 		if models := channel["models"].([]string); len(models) != 1 || models[0] != "custom-model" {

@@ -5,10 +5,10 @@ import { http } from "../src/services/api/request";
 test("connection labels stay user-facing and distinct", () => {
     const cases: Array<[BeefAPIConnectionSummary, string]> = [
         [{ state: "disconnected", hasCredential: false }, "未连接"],
-        [{ state: "connecting", hasCredential: false }, "正在连接 BeefTV"],
+        [{ state: "connecting", hasCredential: false }, "正在连接 OrcaTV"],
         [{ state: "connecting", errorReason: "正在尝试其他连接方式", hasCredential: false }, "正在尝试其他连接方式"],
-        [{ state: "connection_error", hasCredential: false }, "无法连接 BeefTV 服务，请检查网络后重试"],
-        [{ state: "connection_error", errorReason: "BeefTV 连接服务暂时不可用，请稍后重试", hasCredential: false }, "BeefTV 连接服务暂时不可用，请稍后重试"],
+        [{ state: "connection_error", hasCredential: false }, "无法连接 OrcaTV 服务，请检查网络后重试"],
+        [{ state: "connection_error", errorReason: "OrcaTV 连接服务暂时不可用，请稍后重试", hasCredential: false }, "OrcaTV 连接服务暂时不可用，请稍后重试"],
         [{ state: "pending", userCode: "WXYZ-1234", hasCredential: false }, "请在浏览器中确认 WXYZ-1234"],
         [{ state: "pending", userCode: "WXYZ-1234", errorReason: "连接中断，正在重试", hasCredential: false }, "连接中断，正在重试"],
         [{ state: "pending", userCode: "WXYZ-1234", errorReason: "正在完成连接确认", hasCredential: true }, "正在完成连接确认"],

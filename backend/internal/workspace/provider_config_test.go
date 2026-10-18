@@ -35,7 +35,7 @@ func TestProviderConfigMigratesLegacyBeefAPIStateWithoutLosingLocalChoices(t *te
 		t.Fatalf("health = %q", health)
 	}
 	channel := requireEffectiveChannel(t, effective, "beefapi")
-	if channel["name"] != "BeefTV" || channel["baseUrl"] != "https://beeftv.app" {
+	if channel["name"] != "OrcaTV" || channel["baseUrl"] != "https://beeftv.app" {
 		t.Fatal("preset-owned identity was not repaired")
 	}
 	if channel["apiKey"] != "local-secret" || channel["enabled"] != false {

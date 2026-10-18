@@ -13,7 +13,7 @@ import (
 func TestAgentModelCatalogDesktopUsesActualSnapshotWithoutCredentials(t *testing.T) {
 	svc, _ := newModelCatalogTestService(t)
 	svc.mode = serviceModeLocal
-	body := []byte(`{"channels":[{"id":"beefapi","name":"BeefTV","credentialRef":"beefapi-enterprise","apiKey":"private-key","baseUrl":"https://private-provider.test/v1","headers":[{"name":"Authorization","value":"private-header"}],"enabled":true,"models":["gemini-native","image-model"],"modelProfiles":[{"model":"gemini-native","displayName":"Native Gemini","capability":"text","protocol":"chat-completion"},{"model":"image-model","displayName":"Reference Image","capability":"image","protocol":"openai-image"}]},{"id":"disabled","enabled":false,"models":["hidden"]}]}`)
+	body := []byte(`{"channels":[{"id":"beefapi","name":"OrcaTV","credentialRef":"beefapi-enterprise","apiKey":"private-key","baseUrl":"https://private-provider.test/v1","headers":[{"name":"Authorization","value":"private-header"}],"enabled":true,"models":["gemini-native","image-model"],"modelProfiles":[{"model":"gemini-native","displayName":"Native Gemini","capability":"text","protocol":"chat-completion"},{"model":"image-model","displayName":"Reference Image","capability":"image","protocol":"openai-image"}]},{"id":"disabled","enabled":false,"models":["hidden"]}]}`)
 	if err := svc.SaveLocalModelConfig(body); err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func TestAgentModelCatalogDesktopUsesActualSnapshotWithoutCredentials(t *testing
 		t.Fatalf("catalog=%#v", catalog)
 	}
 	ch := catalog.Channels[0]
-	if ch.ID != "beefapi" || ch.Name != "BeefTV" || len(ch.Models) != 2 || ch.Models[0].ModelKey != "gemini-native" || !ch.Models[0].Available || ch.Models[1].Capability != "image" {
+	if ch.ID != "beefapi" || ch.Name != "OrcaTV" || len(ch.Models) != 2 || ch.Models[0].ModelKey != "gemini-native" || !ch.Models[0].Available || ch.Models[1].Capability != "image" {
 		t.Fatalf("channel=%#v", ch)
 	}
 	registry := operations.NewRegistry(svc, operations.NewStore(svc.repo.DB()))
@@ -92,7 +92,7 @@ func TestAgentModelCatalogPreservesDesktopGenerationProfiles(t *testing.T) {
 	profile := func(name, kind, protocol string, config any) map[string]any {
 		return map[string]any{"model": name, "displayName": name, "capability": kind, "protocol": protocol, "capabilityConfig": config}
 	}
-	body, err := json.Marshal(map[string]any{"channels": []any{map[string]any{"id": "beefapi", "name": "BeefTV", "enabled": true, "models": []string{"seedance-2.0-fast", "gpt-image-2.5"}, "modelProfiles": []any{profile("seedance-2.0-fast", "video", "new-api-channel-2", video), profile("gpt-image-2.5", "image", "openai-image", image)}}}})
+	body, err := json.Marshal(map[string]any{"channels": []any{map[string]any{"id": "beefapi", "name": "OrcaTV", "enabled": true, "models": []string{"seedance-2.0-fast", "gpt-image-2.5"}, "modelProfiles": []any{profile("seedance-2.0-fast", "video", "new-api-channel-2", video), profile("gpt-image-2.5", "image", "openai-image", image)}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

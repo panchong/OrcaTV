@@ -19,10 +19,10 @@ const (
 )
 
 const (
-	DefaultBrandName = "BeefTV"
-	DefaultBrandSlug = "beeftv"
+	DefaultBrandName = "OrcaTV"
+	DefaultBrandSlug = "orcatv"
 	DefaultSkinID    = "classic"
-	DefaultLogoURL   = "/logo.svg"
+	DefaultLogoURL   = "/orcatv-logo.png"
 	DefaultVideoURL  = "https://boss-shjd.biliapi.net/updream/aniforge/video/video_bbcb00bd-650d-4249-9346-5cd21fd2484c_m1hc-u0-1pu13x-3v1s.mp4"
 	DefaultPosterURL = "https://i0.hdslb.com/bfs/aitool/aniforge/image/02933f26-5f1b-49ff-a811-b7f95ee5e5b8_m1hc-u0-sau.jpg"
 	DefaultHeroTitle = "让一个故事，\n从文字走向银幕。"

@@ -136,4 +136,4 @@ try {
 
 console.log(JSON.stringify({ routes: report.length, failures, report }, null, 2));
 if (failures.length) process.exit(1);
-console.log(`BeefTV local network audit passed for ${report.length} routes.`);
+console.log(`OrcaTV local network audit passed for ${report.length} routes.`);

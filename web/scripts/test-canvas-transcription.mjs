@@ -45,9 +45,9 @@ try {
     assert.equal(await page.getByTestId("selected-node").textContent(), "video-fixture");
     await page.getByTestId("toolbar-container").evaluate(element => { element.style.width = "380px"; });
     await page.getByRole("toolbar", { name: "节点快捷工具" }).getByRole("button", { name: "字幕", exact: true }).click();
-    await page.getByRole("button", { name: "读取 BeefTV 转写模型" }).click();
+    await page.getByRole("button", { name: "读取 OrcaTV 转写模型" }).click();
     await page.getByRole("combobox", { name: "转写模型" }).click();
-    await page.getByText("hy-asr-3.0-preview · BeefTV", { exact: true }).last().click();
+    await page.getByText("hy-asr-3.0-preview · OrcaTV", { exact: true }).last().click();
     assert.equal(await page.getByText("minimax-speech-2.8-hd", { exact: true }).count(), 0);
     await page.getByRole("button", { name: "自动转写字幕" }).click();
     try { await page.getByText("已识别 1 条字幕，可编辑后保存或导出 SRT", { exact: true }).waitFor(); }

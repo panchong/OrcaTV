@@ -138,7 +138,7 @@ func (c *client) callBusiness(ctx context.Context, tool businessTool, args busin
 	}
 	base := c.currentBaseURL()
 	if base == "" {
-		return nil, &cliError{code: exitTransportFailure, reason: "runtime_not_found", msg: "未发现运行中的 BeefTV 工作区，请先打开 BeefTV"}
+		return nil, &cliError{code: exitTransportFailure, reason: "runtime_not_found", msg: "未发现运行中的 OrcaTV 工作区，请先打开 OrcaTV"}
 	}
 	req, err := http.NewRequestWithContext(ctx, tool.Method, base+path, reader)
 	if err != nil {
